@@ -17,26 +17,22 @@ jobs:
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
       CHAT_ID: ${{ secrets.CHAT_ID }}
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      PRIVATE_REPO: ${{ secrets.PRIVATE_REPO }}
       RUNNER_ID: "1"
       TARGET_BRANCH: "main"
     steps:
-      - name: Fetch engine bundle dari Cloudflare
-        env:
-          ENGINE_TOKEN: ${{ secrets.ENGINE_TOKEN }}
+      - name: Clone private repo
         run: |
           set -eo pipefail
-          mkdir -p ~/engine
-          if ! curl -fsSL --connect-timeout 15 --max-time 90 --retry 3 --retry-delay 2 \
-               -H "X-Engine-Token: $ENGINE_TOKEN" \
-               "https://telegram-vps-bot.menieemoon.workers.dev/engine" \
-               -o /tmp/engine.tar.gz; then
-            curl -s --max-time 30 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-              -d "chat_id=${CHAT_ID}" \
-              -d "text=VM RUNNER #1 GAGAL: engine bundle fetch error" >/dev/null 2>&1 || true
-            exit 1
+          mkdir -p ~/work
+          if ! git clone --depth 1 -b "$TARGET_BRANCH" "https://x-access-token:${GH_TOKEN}@github.com/${PRIVATE_REPO}.git" ~/work/vps; then
+            echo "Clone branch $TARGET_BRANCH belum ada, mencoba clone default branch..."
+            git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${PRIVATE_REPO}.git" ~/work/vps
+            cd ~/work/vps
+            git checkout -b "$TARGET_BRANCH" || true
           fi
-          tar -xzf /tmp/engine.tar.gz -C ~/engine
-          rm -f /tmp/engine.tar.gz
 
-      - name: Start session
-        run: exec bash ~/engine/terminal.sh
+      - name: Start runner
+        run: |
+          cd ~/work/vps
+          exec bash run.sh
