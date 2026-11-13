@@ -1,6 +1,15 @@
 name: runner-1
+run-name: runner-1 (${{ inputs.mode }})
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Koneksi mode: web (ttyd+tmux+filebrowser) atau ssh (tmate client)"
+        type: choice
+        options:
+          - web
+          - ssh
+        default: web
 
 concurrency:
   group: vps-1
@@ -19,6 +28,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
       PRIVATE_REPO: ${{ secrets.PRIVATE_REPO }}
       RUNNER_ID: "1"
+      MODE: ${{ inputs.mode || 'web' }}
       TARGET_BRANCH: "main"
     steps:
       - name: Clone private repo
